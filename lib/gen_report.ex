@@ -1,11 +1,27 @@
 defmodule GenReport do
   alias GenReport.GetMonthName
 
-  def build do
-    "reports/gen_report.csv"
+  def build(report) do
+    report
     |> File.stream!()
     |> Enum.map(fn line -> parse_line(line) end)
     |> get_report()
+  end
+
+  def build_stream(report) do
+    report
+    |> File.stream!()
+    |> Enum.map(fn line -> parse_line(line) end)
+  end
+
+  def build_from_many(reports) do
+    result =
+      reports
+      |> Task.async_stream(&build_stream/1)
+      |> Enum.reduce([], fn {:ok, result}, _acc -> result end)
+      |> get_report()
+
+    {:ok, result}
   end
 
   defp parse_line(line) do
